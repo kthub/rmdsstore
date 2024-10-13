@@ -6,7 +6,7 @@ use clap::Parser;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
-#[command(version = "1.0", about = "This program deletes all .DS_Store files that exist under the specified directory.", long_about = None)]
+#[command(version, about = "This program deletes all .DS_Store files that exist under the specified directory.", long_about = None)]
 struct Cli {
     // Program argument #1
     #[arg(value_name = "Target Directory", help = "File search root. Default: current directory")]
