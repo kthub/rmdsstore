@@ -1,5 +1,7 @@
 # rmdsstore
 
+## Usage
+
 ```plaintext
 This program deletes all .DS_Store files that exist under the specified directory.
 
@@ -13,3 +15,9 @@ Options:
   -h, --help     Print help
   -V, --version  Print version
 ```
+
+## Support this Project
+
+Enjoying this project?  Help keep it growing by buying me a coffee!  ☕️  
+Your support fuels further development and new features.  
+[Buy Me a Coffee](https://www.buymeacoffee.com/milkandsugar)
