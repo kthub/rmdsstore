@@ -20,4 +20,4 @@ Options:
 
 Enjoying this project?  Help keep it growing by buying me a coffee!  ☕️  
 Your support fuels further development and new features.  
-<a href="https://www.buymeacoffee.com/milkandsugar" target="_blank">Buy Me a Coffee</a>
+<a href="https://www.buymeacoffee.com/milkandsugar" target="_blank" rel="noopener">Buy Me a Coffee</a>
