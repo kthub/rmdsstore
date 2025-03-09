@@ -1,5 +1,7 @@
 # rmdsstore
 
+<a href="https://www.buymeacoffee.com/milkandsugar" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a>
+
 ## Usage
 
 ```plaintext
@@ -15,9 +17,3 @@ Options:
   -h, --help     Print help
   -V, --version  Print version
 ```
-
-## Support this Project
-
-Enjoying this project?  Help keep it growing by buying me a coffee!  ☕️  
-Your support fuels further development and new features.  
-[Buy Me a Coffee](https://www.buymeacoffee.com/milkandsugar)
