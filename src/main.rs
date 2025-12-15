@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process;
 use clap::Parser;
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 #[derive(Parser)]
 #[command(version, about = "This program deletes all .DS_Store files that exist under the specified directory.", long_about = None)]
@@ -17,29 +17,44 @@ struct Cli {
     force: bool
 }
 
+fn is_hidden_or_ignored(entry: &DirEntry) -> bool {
+    if entry.depth() == 0 {
+        return false;
+    }
+
+    entry.file_name()
+         .to_str()
+         .map(|s| {
+             if s == ".DS_Store" { return false; }
+             s.starts_with('.') || s == "node_modules" || s == "target"
+         })
+         .unwrap_or(false)
+}
+
 fn main() {
     let args = Cli::parse();
 
-    let mut target_dir = PathBuf::from(".");
-    if let Some(tdir) = args.tdir {
-        target_dir = PathBuf::from(tdir);
-    }
+    let target_dir = args.tdir
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
 
     // check if the path exists
     if !target_dir.exists() {
-        println!("Error: Directory '{}' does not exist.", target_dir.display());
+        eprintln!("Error: Directory '{}' does not exist.", target_dir.display());
         process::exit(1);
     }
     
     // check if the path is directory
     if !target_dir.is_dir() {
-        println!("Error: '{}' is not a directory.", target_dir.display());
+        eprintln!("Error: '{}' is not a directory.", target_dir.display());
         process::exit(1);
     }
 
     // find files to delete
     let mut files_to_delete = Vec::new();
-    for entry in WalkDir::new(target_dir.clone()) {
+
+    let walker = WalkDir::new(&target_dir).into_iter();
+    for entry in walker.filter_entry(|e| !is_hidden_or_ignored(e)) {
         if let Ok(entry) = entry {
             let file_name = entry.path().file_name().unwrap_or(&OsStr::new(""));
 
@@ -72,9 +87,11 @@ fn main() {
         }
 
         if del_flag {
-            files_to_delete.clone().into_iter().for_each(|file_path| {
-                std::fs::remove_file(&file_path).unwrap();
-            });
+            for file_path in files_to_delete {
+                if let Err(e) = std::fs::remove_file(&file_path) {
+                    eprintln!("Failed to delete {}: {}", file_path.display(), e);
+                }
+            }
             println!("Files deleted successfully.");
         } else {
             println!("File deletion canceled.");
