@@ -8,13 +8,17 @@ use walkdir::{DirEntry, WalkDir};
 #[derive(Parser)]
 #[command(version, about = "This program deletes all .DS_Store files that exist under the specified directory.", long_about = None)]
 struct Cli {
-    // Program argument #1
     #[arg(value_name = "Target Directory", help = "File search root. Default: current directory")]
     tdir: Option<String>,
 
-    // Sets a custom config file
     #[arg(short, long, help = "Remove files without confirmation.")]
-    force: bool
+    force: bool,
+
+    #[arg(short = 'n', long, help = "Show files that would be deleted without actually deleting them.")]
+    dry_run: bool,
+
+    #[arg(short, long, help = "Suppress non-critical output.")]
+    quiet: bool,
 }
 
 fn is_hidden_or_ignored(entry: &DirEntry) -> bool {
@@ -38,13 +42,16 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
 
-    // check if the path exists
+    if args.force && args.dry_run {
+        eprintln!("Error: --force and --dry-run cannot be used together.");
+        process::exit(1);
+    }
+
     if !target_dir.exists() {
         eprintln!("Error: Directory '{}' does not exist.", target_dir.display());
         process::exit(1);
     }
-    
-    // check if the path is directory
+
     if !target_dir.is_dir() {
         eprintln!("Error: '{}' is not a directory.", target_dir.display());
         process::exit(1);
@@ -56,47 +63,80 @@ fn main() {
     let walker = WalkDir::new(&target_dir).into_iter();
     for entry in walker.filter_entry(|e| !is_hidden_or_ignored(e)) {
         if let Ok(entry) = entry {
-            let file_name = entry.path().file_name().unwrap_or(&OsStr::new(""));
+            let file_name = entry.path().file_name().unwrap_or(OsStr::new(""));
 
             if file_name == ".DS_Store" {
-                if !args.force {
-                    println!("DETECT : {}", entry.path().display());
-                }
                 files_to_delete.push(entry.path().to_path_buf());
             }
         }
     }
 
-    // delete files
-    if !files_to_delete.is_empty() {
+    files_to_delete.sort();
 
-        let mut del_flag = false;
-        if !args.force {
-            print!("Are you sure you want to delete these files? (y/N): ");
-            io::stdout().flush().unwrap();
+    if args.dry_run || !args.force {
+        for path in &files_to_delete {
+            println!("DETECT : {}", path.display());
+        }
+    }
 
-            let mut input = String::new();
-            io::stdin().read_line(&mut input).unwrap();
-            let input = input.trim();
+    if files_to_delete.is_empty() {
+        if !args.quiet {
+            println!("There is no .DS_Store under the target directory={}", target_dir.display());
+        }
+        return;
+    }
 
-            if input.eq_ignore_ascii_case("y") {
-                del_flag = true;
-            }
-        } else {
-            del_flag = true;
+    // dry-run: just show files, don't delete
+    if args.dry_run {
+        println!("Dry run: {} file(s) would be deleted.", files_to_delete.len());
+        return;
+    }
+
+    // determine whether to proceed
+    let should_delete = if args.force {
+        true
+    } else {
+        print!("Are you sure you want to delete these files? (y/N): ");
+        if let Err(e) = io::stdout().flush() {
+            eprintln!("Error: failed to flush stdout: {}", e);
+            process::exit(1);
         }
 
-        if del_flag {
-            for file_path in files_to_delete {
-                if let Err(e) = std::fs::remove_file(&file_path) {
-                    eprintln!("Failed to delete {}: {}", file_path.display(), e);
-                }
-            }
-            println!("Files deleted successfully.");
-        } else {
+        let mut input = String::new();
+        if let Err(e) = io::stdin().read_line(&mut input) {
+            eprintln!("Error: failed to read input: {}", e);
+            process::exit(1);
+        }
+        input.trim().eq_ignore_ascii_case("y")
+    };
+
+    if !should_delete {
+        if !args.quiet {
             println!("File deletion canceled.");
         }
-    } else {
-        println!("There is no .DS_Store under the target directory={:?}", target_dir);
+        return;
+    }
+
+    // delete files and track results
+    let total = files_to_delete.len();
+    let mut deleted = 0usize;
+    let mut failed = 0usize;
+
+    for file_path in files_to_delete {
+        match std::fs::remove_file(&file_path) {
+            Ok(()) => deleted += 1,
+            Err(e) => {
+                eprintln!("Failed to delete {}: {}", file_path.display(), e);
+                failed += 1;
+            }
+        }
+    }
+
+    if !args.quiet {
+        println!("Deleted {}/{} file(s).", deleted, total);
+    }
+
+    if failed > 0 {
+        process::exit(1);
     }
 }

@@ -14,6 +14,14 @@ Arguments:
 
 Options:
   -f, --force    Remove files without confirmation.
+  -n, --dry-run  Show files that would be deleted without actually deleting them.
+  -q, --quiet    Suppress non-critical output.
   -h, --help     Print help
   -V, --version  Print version
 ```
+
+## Notes
+
+- Hidden directories and `node_modules`/`target` are skipped automatically.
+- `--force` and `--dry-run` cannot be used together.
+- Exit code is `1` if any file fails to delete.
